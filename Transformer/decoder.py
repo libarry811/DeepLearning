@@ -40,9 +40,9 @@ class DecoderLayer(nn.Module):
         return x
 
 class Decoder(nn.Module):#dec_voc_size解码器处理的目标序列语言 / 领域的词表
-    def __init__(self, dec_voc_size, max_len, d_model, ffn_hidden, n_head, n_layer, device, dropout):
+    def __init__(self, dec_voc_size, max_len, d_model, ffn_hidden, n_head, n_layer, dropout, device, padding_idx=1):
         super(Decoder, self).__init__()
-        self.embedding = TransformerEmbedding(dec_voc_size, d_model, max_len, device, dropout)
+        self.embedding = TransformerEmbedding(dec_voc_size, d_model, max_len, dropout, device, padding_idx)
         self.layers = nn.ModuleList(
             [
                 DecoderLayer(d_model, ffn_hidden, n_head, dropout)

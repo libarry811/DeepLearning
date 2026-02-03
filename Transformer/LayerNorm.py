@@ -17,7 +17,7 @@ class LayerNorm(nn.Module):
         # keepdim=True保持维度与输入一致，方便后续计算
         var =x.var(-1, unbiased = False, keepdim = True)
         # 加eps避免方差为0时，平方根计算出现分母为0的错误
-        out = (x - mean)/torch.sqrt(var + self.epd)
+        out = (x - mean)/torch.sqrt(var + self.eps)
         # 缩放+偏移：通过可训练参数γ和β恢复特征表达能力，避免归一化后特征信息丢失
         # 逐元素相乘γ，再逐元素相加β，形状广播匹配
         out = self.gamma*out + self.beta

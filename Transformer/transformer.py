@@ -15,12 +15,14 @@ class Transformer(nn.Module):
                  n_heads,
                  ffn_hidden,
                  n_layers,
-                 device,
-                 drop_prob
+                 drop_prob,
+                 device
                  ):
         super(Transformer, self).__init__()
-        self.encoder = Encoder(enc_voc_size, max_len, d_model, ffn_hidden, n_heads, n_layers, device, drop_prob)
-        self.decoder = Decoder(dec_voc_size, max_len, d_model, ffn_hidden, n_heads, n_layers, device, drop_prob)
+        # src_pad_idx新增：传入源序列 padding 索引
+        self.encoder = Encoder(enc_voc_size, max_len, d_model, ffn_hidden, n_heads, n_layers, drop_prob, device, src_pad_idx)
+        # trg_pad_idx 新增：传入目标序列 padding 索引
+        self.decoder = Decoder(dec_voc_size, max_len, d_model, ffn_hidden, n_heads, n_layers, drop_prob, device, trg_pad_idx)
         self.src_pad_idx = src_pad_idx
         self.trg_pad_idx = trg_pad_idx
         self.device = device
@@ -63,7 +65,12 @@ class Transformer(nn.Module):
     def forward(self, src, trg):
         # 构建编码器源序列的填充掩码，q/k均为源序列src，屏蔽src中的padding无效位
         # 最终形状(batch, 1, src_len, src_len)，仅保留源序列自身有效token的注意力交互
-        src_mask = self.make_pad_mask(src, src,self.src_pad_idx, self.src_pad_idx)
+        src_mask = self.make_pad_mask(src, src, self.src_pad_idx, self.src_pad_idx)
+
+        # 新增：专门用于交叉注意力的掩码 (Batch, 1, 1, Src_Len)
+        # 只需要屏蔽 src 中的 padding，并在维度 2 (Trg_Len) 上进行广播
+        src_key_mask = src.ne(self.src_pad_idx).unsqueeze(1).unsqueeze(2)
+
         # 构建解码器目标序列的最终掩码：因果掩码 * 填充掩码，同时实现两大核心屏蔽逻辑
         # 因果掩码：屏蔽未来token；填充掩码：屏蔽padding无效位；相乘实现“双重过滤”
         '''相乘的逻辑效果：只有当两个掩码对应位置同时为 1（True） 时，相乘结果才为 1（有效）；只要其中一个掩码位置为 0（False），相乘结果就为 0（屏蔽）。
@@ -83,7 +90,9 @@ class Transformer(nn.Module):
         enc = self.encoder(src, src_mask)
         # 将目标序列trg、编码器输出enc、目标序列最终掩码trg_mask、源序列填充掩码src_mask传入解码器
         # 解码器先学习自身历史特征，再通过交叉注意力融合enc的源序列信息，最终输出词表维度的预测特征out
-        out = self.decoder(trg, enc, trg_mask, src_mask)
+        #out = self.decoder(trg, enc, trg_mask, src_mask)
+        # 传入解码器时，使用 src_key_mask 作为 s_mask
+        out = self.decoder(trg, enc, trg_mask, src_key_mask)
         return out
 
 '''

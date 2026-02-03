@@ -2,9 +2,9 @@ import torch
 from torch import nn
 import math
 
-x = torch.rand(128, 32, 512)#batch_size,seq_len,d_model
-d_model = 512
-n_head = 8
+#x = torch.rand(128, 32, 512)#batch_size,seq_len,d_model
+#d_model = 512
+#n_head = 8
 
 class MultHeadAttention(nn.Module):
     def __init__(self, d_model, n_head):
@@ -50,10 +50,10 @@ class MultHeadAttention(nn.Module):
         out = self.w_combine(score)#out((batch,time,dimension))
         return out
 
-attention = MultHeadAttention(d_model, n_head)
-out = attention(x,x,x)
-print(out)
-print(out.shape)
+#attention = MultHeadAttention(d_model, n_head)
+#out = attention(x,x,x)
+#print(out)
+#print(out.shape)
 
 
 

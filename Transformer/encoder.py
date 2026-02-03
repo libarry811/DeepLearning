@@ -41,9 +41,9 @@ class EncoderLayer(nn.Module):#ffn是PositionWiseFeedForward（位置前馈网�
         return x
 
 class Encoder(nn.Module):#enc_voc_size编码器处理的目标序列语言 / 领域的词表,n_layer编码器层数
-    def __init__(self, enc_voc_size, max_len, d_model, ffn_hidden, n_head, n_layer, device, dropout = 0.1):
+    def __init__(self, enc_voc_size, max_len, d_model, ffn_hidden, n_head, n_layer, dropout, device, padding_idx=1):
         super(Encoder, self).__init__()
-        self.embedding = TransformerEmbedding(enc_voc_size, d_model, max_len, device, dropout)
+        self.embedding = TransformerEmbedding(enc_voc_size, d_model, max_len, dropout, device, padding_idx)
         #循环n_layer次，每次创建一个结构完全相同的EncoderLayer层，
         #把所有层装进nn.ModuleList容器，赋值给self.layers，让 PyTorch 管理这些层的参数。
         '''
