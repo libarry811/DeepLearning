@@ -28,13 +28,18 @@ class MultHeadAttention(nn.Module):
         batch, time, dimension = q.shape # 解包输入q的维度，分别赋值给批次、序列长度、嵌入维度,和这三个是同一个东西batch_size,seq_len,d_model
         n_d = self.d_model//self.n_head  #计算每个注意力头的维度和之前的d_k是同一个东西）
         #线性层权重矩阵W：形状dmodel×dmodel→ 对应理论中的WQ/WK/WV投影矩阵
+        # 【核心修改点】分别获取 q, k, v 的序列长度
+        # 在 Cross Attention 中，len_q (目标序列长) 和 len_k/len_v (源序列长) 是不一样的
+        len_q = q.size(1)
+        len_k = k.size(1)
+        len_v = v.size(1)
         q, k, v = self.w_q(q), self.w_k(k), self.w_v(v)
         #多头注意力里切分多头的核心维度变换操作，用view方法把原本整体的 Q 张量
         #在嵌入维度上拆分成n_head个独立的子空间，为后续多注意力头并行计算做准备
         #dimension=n_head*n_d,q:batch,time,dimension->batch,time,n_head,n_d
-        q = q.view(batch, time, self.n_head, n_d).permute(0, 2, 1, 3)#为多头并行计算和Q・K^T 矩阵乘法做维度适配
-        k = k.view(batch, time, self.n_head, n_d).permute(0, 2, 1, 3)#qkv形状均为
-        v = v.view(batch, time, self.n_head, n_d).permute(0, 2, 1, 3)#（batch,n_head,time,n_d）
+        q = q.view(batch, len_q, self.n_head, n_d).permute(0, 2, 1, 3)#为多头并行计算和Q・K^T 矩阵乘法做维度适配
+        k = k.view(batch, len_k, self.n_head, n_d).permute(0, 2, 1, 3)#qkv形状均为
+        v = v.view(batch, len_v, self.n_head, n_d).permute(0, 2, 1, 3)#（batch,n_head,time,n_d）
         #score为（batch,n_head,time，time）
         score = q@k.transpose(2,3)/math.sqrt(n_d)#@矩阵乘法简写，对K最后两维转置，之后进行缩放
         '''
@@ -45,7 +50,7 @@ class MultHeadAttention(nn.Module):
             score = score.masked_fill(mask==0,-10000)
         score = self.softmax(score)@v#score(batch,n_head,time,n_d)
         #.contiguous()：让转置后的张量内存连续化,符合view要求
-        #score(batch,time,dimension)
+        #score(batch,len_q,dimension)
         score = score.permute(0,2,1,3).contiguous().view(batch,time,dimension)#合并多头操作
         out = self.w_combine(score)#out((batch,time,dimension))
         return out

@@ -55,5 +55,7 @@ class TransformerEmbedding(nn.Module):
 
     def forward(self, x):
         tok_emb = self.tok_emb(x)
+        # 加上这一行缩放，d_model 是你传入的维度
+        tok_emb = tok_emb * math.sqrt(self.tok_emb.embedding_dim)
         pos_emb = self.pos_emb(x)
         return self.drop_out(tok_emb + pos_emb)
